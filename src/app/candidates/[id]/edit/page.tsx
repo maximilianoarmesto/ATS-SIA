@@ -190,13 +190,13 @@ export default function EditCandidatePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name <span className="text-red-500">*</span>
+                  First Name <span className="text-red-600">*</span>
                 </label>
                 <input id="firstName" name="firstName" type="text" required maxLength={100} defaultValue={candidate.firstName} className="input" />
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name <span className="text-red-500">*</span>
+                  Last Name <span className="text-red-600">*</span>
                 </label>
                 <input id="lastName" name="lastName" type="text" required maxLength={100} defaultValue={candidate.lastName} className="input" />
               </div>
@@ -204,7 +204,7 @@ export default function EditCandidatePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-red-600">*</span>
                 </label>
                 <input id="email" name="email" type="email" required defaultValue={candidate.email} className="input" />
               </div>

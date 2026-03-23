@@ -138,7 +138,7 @@ export default function NewCandidatePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name <span className="text-red-500">*</span>
+                  First Name <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="firstName"
@@ -152,7 +152,7 @@ export default function NewCandidatePage() {
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name <span className="text-red-500">*</span>
+                  Last Name <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="lastName"
@@ -168,7 +168,7 @@ export default function NewCandidatePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="email"

@@ -127,7 +127,7 @@ export default function NewApplicationPage() {
             <h2 className="text-lg font-semibold text-gray-900">Candidate & Role</h2>
             <div>
               <label htmlFor="candidateId" className="block text-sm font-medium text-gray-700 mb-1">
-                Candidate <span className="text-red-500">*</span>
+                Candidate <span className="text-red-600">*</span>
               </label>
               <select id="candidateId" name="candidateId" required className="input">
                 <option value="">Select a candidate...</option>
@@ -138,7 +138,7 @@ export default function NewApplicationPage() {
             </div>
             <div>
               <label htmlFor="roleId" className="block text-sm font-medium text-gray-700 mb-1">
-                Role <span className="text-red-500">*</span>
+                Role <span className="text-red-600">*</span>
               </label>
               <select id="roleId" name="roleId" required className="input">
                 <option value="">Select a role...</option>

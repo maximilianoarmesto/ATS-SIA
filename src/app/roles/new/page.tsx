@@ -102,7 +102,7 @@ export default function NewRolePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title <span className="text-red-500">*</span>
+                  Title <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="title"
@@ -116,7 +116,7 @@ export default function NewRolePage() {
               </div>
               <div>
                 <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-                  Company <span className="text-red-500">*</span>
+                  Company <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="company"
