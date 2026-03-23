@@ -1,17 +1,44 @@
+import type { Metadata } from 'next'
 import { Navbar } from '@/components/navbar'
+import { ApplicationsList } from '@/components/applications-list'
 import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/utils'
 
-async function getApplications() {
+// ---------------------------------------------------------------------------
+// Page metadata
+// ---------------------------------------------------------------------------
+
+export const metadata: Metadata = {
+  title: 'Applications | ATS - SIA',
+  description: 'View and manage all job applications in the recruitment pipeline.',
+}
+
+// ---------------------------------------------------------------------------
+// Status display config for the summary badges
+// ---------------------------------------------------------------------------
+
+const STATUS_SUMMARY = [
+  { status: 'APPLIED',      label: 'Applied',      color: 'bg-yellow-100 text-yellow-800' },
+  { status: 'UNDER_REVIEW', label: 'Under Review',  color: 'bg-blue-100 text-blue-800'   },
+  { status: 'SHORTLISTED',  label: 'Shortlisted',   color: 'bg-cyan-100 text-cyan-800'   },
+  { status: 'INTERVIEWING', label: 'Interviewing',  color: 'bg-purple-100 text-purple-800'},
+  { status: 'OFFER_SENT',   label: 'Offer Sent',    color: 'bg-orange-100 text-orange-800'},
+  { status: 'HIRED',        label: 'Hired',         color: 'bg-green-100 text-green-800' },
+  { status: 'REJECTED',     label: 'Rejected',      color: 'bg-red-100 text-red-800'     },
+  { status: 'WITHDRAWN',    label: 'Withdrawn',     color: 'bg-gray-100 text-gray-600'   },
+] as const
+
+// ---------------------------------------------------------------------------
+// Data fetching
+// ---------------------------------------------------------------------------
+
+async function getAllApplications() {
   try {
     const applications = await prisma.application.findMany({
       include: {
         candidate: true,
         role: true,
       },
-      orderBy: {
-        appliedAt: 'desc',
-      },
+      orderBy: [{ appliedAt: 'desc' }],
     })
     return applications
   } catch (error) {
@@ -20,143 +47,62 @@ async function getApplications() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
+
 export default async function ApplicationsPage() {
-  const applications = await getApplications()
+  const applications = await getAllApplications()
+  const totalCount = applications.length
 
   return (
     <main>
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Applications
-          </h1>
-          <p className="text-lg text-gray-600">
-            Manage and review all job applications
-          </p>
+
+        {/* ── Page header ─────────────────────────────────────────────── */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">
+              Applications
+            </h1>
+            <p className="text-gray-600">
+              Manage and review all job applications in the recruitment pipeline
+            </p>
+          </div>
         </div>
 
-        {applications.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+        {/* ── Summary bar ─────────────────────────────────────────────── */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            Showing{' '}
+            <span className="font-semibold text-gray-900">{totalCount}</span>{' '}
+            application{totalCount !== 1 ? 's' : ''}
+          </p>
+
+          {totalCount > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_SUMMARY.map(({ status, label, color }) => {
+                const count = applications.filter(
+                  (a) => a.status === status
+                ).length
+                if (count === 0) return null
+                return (
+                  <span
+                    key={status}
+                    className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${color}`}
+                  >
+                    {count} {label}
+                  </span>
+                )
+              })}
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No applications yet</h3>
-            <p className="text-gray-500">Applications will appear here once candidates start applying.</p>
-          </div>
-        ) : (
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Candidate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Position
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Company
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stage
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Applied Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {applications.map((application) => (
-                    <tr key={application.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                            <span className="text-primary-600 font-medium text-sm">
-                              {application.candidate.firstName.charAt(0)}
-                              {application.candidate.lastName.charAt(0)}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {application.candidate.firstName} {application.candidate.lastName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {application.candidate.email}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {application.role.title}
-                        </div>
-                        {application.role.department && (
-                          <div className="text-xs text-gray-500">
-                            {application.role.department}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {application.role.company}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
-                          {application.stage.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          application.status === 'APPLIED'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : application.status === 'UNDER_REVIEW'
-                            ? 'bg-blue-100 text-blue-800'
-                            : application.status === 'SHORTLISTED'
-                            ? 'bg-cyan-100 text-cyan-800'
-                            : application.status === 'INTERVIEWING'
-                            ? 'bg-purple-100 text-purple-800'
-                            : application.status === 'OFFER_SENT'
-                            ? 'bg-orange-100 text-orange-800'
-                            : application.status === 'HIRED'
-                            ? 'bg-green-100 text-green-800'
-                            : application.status === 'REJECTED'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {application.status.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(application.appliedAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <button className="text-primary-600 hover:text-primary-800">
-                            View
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-800">
-                            Update
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* ── Applications table ──────────────────────────────────────── */}
+        <ApplicationsList applications={applications} />
+
       </div>
     </main>
   )
