@@ -98,9 +98,16 @@ async function main() {
 
   // -------------------------------------------------------------------------
   // Roles (open positions)
+  // Use upsert keyed on title+company so re-runs are fully idempotent.
+  // The unique index on (title, company) does not exist in the schema, so we
+  // match on a deterministic combination stored in the description field as a
+  // stable surrogate — we instead look up by the recruiter's postedById + title
+  // approach.  The simplest fully-idempotent strategy is to look up by title
+  // and company via findFirst, then upsert on the returned id.
   // -------------------------------------------------------------------------
-  const role1 = await prisma.role.create({
-    data: {
+  const role1 = await upsertRole(
+    { title: 'Senior Software Engineer', company: 'Tech Corp' },
+    {
       title: 'Senior Software Engineer',
       description:
         'Join our core platform team building scalable full-stack features using React and Node.js.',
@@ -119,11 +126,12 @@ async function main() {
       postedById: recruiterUser.id,
       publishedAt: new Date('2024-01-15T09:00:00Z'),
       closesAt: new Date('2024-03-15T23:59:59Z'),
-    },
-  })
+    }
+  )
 
-  const role2 = await prisma.role.create({
-    data: {
+  const role2 = await upsertRole(
+    { title: 'Frontend Developer', company: 'Startup Inc' },
+    {
       title: 'Frontend Developer',
       description:
         'Work closely with our design system team to build pixel-perfect, accessible UI components.',
@@ -141,11 +149,12 @@ async function main() {
       status: RoleStatus.PUBLISHED,
       postedById: recruiterUser.id,
       publishedAt: new Date('2024-01-20T09:00:00Z'),
-    },
-  })
+    }
+  )
 
-  const role3 = await prisma.role.create({
-    data: {
+  const role3 = await upsertRole(
+    { title: 'Product Designer', company: 'Tech Corp' },
+    {
       title: 'Product Designer',
       description:
         'Own end-to-end design for our consumer-facing product from discovery through delivery.',
@@ -162,14 +171,17 @@ async function main() {
       benefits: 'Health insurance, commuter benefits, gym membership.',
       status: RoleStatus.DRAFT,
       postedById: hiringManager.id,
-    },
-  })
+    }
+  )
 
   // -------------------------------------------------------------------------
   // Applications
+  // Upsert on the unique (candidateId, roleId) constraint so re-runs are safe.
   // -------------------------------------------------------------------------
-  await prisma.application.create({
-    data: {
+  await prisma.application.upsert({
+    where: { candidateId_roleId: { candidateId: candidate1.id, roleId: role1.id } },
+    update: {},
+    create: {
       candidateId: candidate1.id,
       roleId: role1.id,
       status: ApplicationStatus.INTERVIEWING,
@@ -181,8 +193,10 @@ async function main() {
     },
   })
 
-  await prisma.application.create({
-    data: {
+  await prisma.application.upsert({
+    where: { candidateId_roleId: { candidateId: candidate2.id, roleId: role2.id } },
+    update: {},
+    create: {
       candidateId: candidate2.id,
       roleId: role2.id,
       status: ApplicationStatus.UNDER_REVIEW,
@@ -192,8 +206,10 @@ async function main() {
     },
   })
 
-  await prisma.application.create({
-    data: {
+  await prisma.application.upsert({
+    where: { candidateId_roleId: { candidateId: candidate3.id, roleId: role3.id } },
+    update: {},
+    create: {
       candidateId: candidate3.id,
       roleId: role3.id,
       status: ApplicationStatus.APPLIED,
@@ -203,8 +219,10 @@ async function main() {
   })
 
   // Alice also applied for the Frontend role
-  await prisma.application.create({
-    data: {
+  await prisma.application.upsert({
+    where: { candidateId_roleId: { candidateId: candidate1.id, roleId: role2.id } },
+    update: {},
+    create: {
       candidateId: candidate1.id,
       roleId: role2.id,
       status: ApplicationStatus.SHORTLISTED,
@@ -219,6 +237,26 @@ async function main() {
   console.log('Created users:', { adminUser, recruiterUser, hiringManager })
   console.log('Created candidates:', { candidate1, candidate2, candidate3 })
   console.log('Created roles:', { role1, role2, role3 })
+}
+
+// ---------------------------------------------------------------------------
+// Helper: upsert a Role matched by (title, company) — acts as a natural key.
+// ---------------------------------------------------------------------------
+type RoleCreateInput = Parameters<typeof prisma.role.create>[0]['data']
+
+async function upsertRole(
+  key: { title: string; company: string },
+  data: RoleCreateInput
+) {
+  const existing = await prisma.role.findFirst({
+    where: { title: key.title, company: key.company },
+  })
+
+  if (existing) {
+    return existing
+  }
+
+  return prisma.role.create({ data })
 }
 
 main()

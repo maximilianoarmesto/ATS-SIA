@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:compile": "tsc --project tsconfig.seed.json"
+    "db:seed:compile": "tsc --project tsconfig.seed.json",
+    "db:seed:prod": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "5.7.1",

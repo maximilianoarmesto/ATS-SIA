@@ -71,8 +71,8 @@ COPY . .
 # at build time (required by Next.js server components that import prisma.ts).
 RUN npx prisma generate
 
-# Compile prisma/seed.ts → prisma/seed.js (CommonJS) so it can be executed
-# with plain `node` inside the runner stage (where tsx is not available).
+# Compile the seed script to CommonJS so it can be executed with plain `node`
+# in the runner stage (which has no TypeScript toolchain or tsx).
 RUN npm run db:seed:compile
 
 # Build the Next.js application.
@@ -112,12 +112,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy the public directory (favicon, SVGs, etc.).
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy the Prisma schema, migrations, and the compiled seed script so they are
-# available at container startup:
-#   - prisma migrate deploy  – applies any pending schema migrations
-#   - node prisma/seed.js    – seeds initial data (when SEED_DATABASE=true)
-# The Prisma CLI itself is already present inside node_modules (copied as part
-# of the standalone trace by Next.js); we only need the project artefacts.
+# Copy the Prisma schema, migrations, and compiled seed script so that:
+#   • `prisma migrate deploy` can apply migrations at container startup.
+#   • `node prisma/seed.js` can seed the database without needing tsx or tsc.
+# The Prisma CLI itself is present inside node_modules (traced by Next.js
+# standalone output); we only need the project-level files here.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Switch to the non-root user before starting the process.
@@ -131,11 +130,11 @@ EXPOSE 3000
 # Example (standalone):
 #   docker run -e DATABASE_URL="postgresql://user:pass@db:5432/ats_sia_db" ...
 #
-# When using docker-compose.yml the startup command is overridden to:
-#   1. Apply pending migrations:  npx prisma migrate deploy
-#   2. Seed initial data:         node prisma/seed.js  (only when SEED_DATABASE=true)
-#   3. Start the server:          node server.js
+# When using docker-compose.yml the command is overridden to:
+#   1. Apply any pending migrations   (prisma migrate deploy)
+#   2. Seed the database with sample data (node prisma/seed.js — idempotent)
+#   3. Start the Next.js server       (node server.js)
 #
 # Default: start the standalone Next.js server directly (assumes the database
-# schema is already up to date and seeding is not required).
+# schema is already up to date and seeded).
 CMD ["node", "server.js"]
