@@ -244,9 +244,16 @@ export function RolesList({ roles }: RolesListProps) {
                     {formatDate(role.createdAt)}
                   </td>
 
-                  {/* Actions — Edit */}
+                  {/* Actions — View / Edit */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3 text-sm">
+                      <Link
+                        href={`/roles/${role.id}`}
+                        className="font-medium text-primary-600 hover:text-primary-800 transition-colors"
+                      >
+                        View
+                      </Link>
+                      <span aria-hidden="true" className="text-gray-300">|</span>
                       <Link
                         href={`/roles/${role.id}/edit`}
                         className="font-medium text-gray-600 hover:text-gray-900 transition-colors"
