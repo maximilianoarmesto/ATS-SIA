@@ -11,6 +11,7 @@ A full-stack recruitment management platform built with Next.js 14, PostgreSQL, 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Quick Start (Docker)](#quick-start-docker)
 - [Prerequisites](#prerequisites)
 - [Local Development Setup](#local-development-setup)
   - [1. Clone the Repository](#1-clone-the-repository)
@@ -59,6 +60,9 @@ The public-facing **Jobs** page surfaces published roles to prospective applican
 
 ```
 .
+├── docker/
+│   └── init-db/
+│       └── 01-init-extensions.sql  # PostgreSQL extensions (pg_trgm)
 ├── prisma/
 │   ├── migrations/          # SQL migration history
 │   ├── schema.prisma        # Database schema (source of truth)
@@ -105,18 +109,82 @@ The public-facing **Jobs** page surfaces published roles to prospective applican
 ├── .eslintrc.json           # ESLint configuration
 ├── .gitignore
 ├── .prettierrc              # Prettier configuration
+├── docker-compose.yml       # Docker Compose orchestration
+├── Dockerfile               # Multi-stage production image
 ├── next.config.js           # Next.js configuration
 ├── package.json
 ├── postcss.config.js
 ├── tailwind.config.ts       # Tailwind CSS configuration
-└── tsconfig.json            # TypeScript configuration
+├── tsconfig.json            # TypeScript configuration
+└── tsconfig.seed.json       # TypeScript config for seed compilation
 ```
+
+---
+
+## Quick Start (Docker)
+
+> **Requirement:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose plugin) must be installed.
+
+The entire application — PostgreSQL database, schema migrations, and sample seed data — is fully automated. A single command is all that is needed:
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd ats-sia
+
+# 2. (Optional) Copy the environment file and customise credentials
+cp .env.example .env
+
+# 3. Build the image and start all services
+docker compose up --build
+```
+
+On first run, Docker will automatically:
+
+1. **Start PostgreSQL 16** and initialise the `pg_trgm` extension.
+2. **Apply all database migrations** via `prisma migrate deploy`.
+3. **Seed the database** with sample users, candidates, roles, and applications.
+4. **Start the Next.js production server** on port 3000.
+
+The application will be available at **[http://localhost:3000](http://localhost:3000)** once the `app` container prints its ready message.
+
+### Subsequent runs
+
+```bash
+# Start without rebuilding (image already exists):
+docker compose up
+
+# Start in the background:
+docker compose up -d
+
+# Stop all services (data is preserved):
+docker compose down
+
+# Stop and wipe the database volume (full reset):
+docker compose down -v
+```
+
+### Seeding behaviour
+
+The seed script is **fully idempotent** — it uses `upsert` for all records and is safe to run on an already-populated database. By default, seeding runs on every container startup.
+
+To disable automatic seeding (e.g. in a production deployment with real data), set `SEED_DATABASE=false` in `.env`:
+
+```env
+SEED_DATABASE="false"
+```
+
+The seed creates:
+- **3 platform users** – admin, recruiter, and hiring manager accounts
+- **3 candidates** – with varied profiles and statuses
+- **3 roles** – senior engineer (hybrid), frontend developer (remote), product designer (on-site)
+- **4 applications** – linking candidates to roles across different pipeline stages
 
 ---
 
 ## Prerequisites
 
-Make sure the following are installed on your machine before proceeding:
+The following are required **only for local development** (outside Docker):
 
 | Tool | Minimum Version | Check |
 |---|---|---|
@@ -130,6 +198,8 @@ Make sure the following are installed on your machine before proceeding:
 ---
 
 ## Local Development Setup
+
+Use this workflow when you want hot-reload, Prisma Studio, or direct database access during development.
 
 ### 1. Clone the Repository
 
@@ -234,7 +304,9 @@ The application will be available at **[http://localhost:3000](http://localhost:
 | `npm run db:push` | Push the Prisma schema to the database (dev / prototyping) |
 | `npm run db:migrate` | Apply pending migrations (production-safe) |
 | `npm run db:studio` | Open Prisma Studio in the browser for visual DB inspection |
-| `npm run db:seed` | Seed the database with sample candidates, roles, and applications |
+| `npm run db:seed` | Seed the database with sample data (uses `tsx`, for local dev) |
+| `npm run db:seed:compile` | Compile `prisma/seed.ts` → `prisma/seed.js` (used by Docker build) |
+| `npm run db:seed:prod` | Run the compiled seed script with plain `node` (used inside Docker) |
 
 ---
 
@@ -337,6 +409,31 @@ Key conventions:
 
 ## Troubleshooting
 
+### Docker: application does not start
+
+- Ensure Docker Desktop is running and the daemon is reachable (`docker info`).
+- Try a full rebuild to pick up any changes: `docker compose up --build`.
+- Check container logs for errors: `docker compose logs app` and `docker compose logs db`.
+
+### Docker: port already in use
+
+- Change the host-side port in `.env`:
+  ```env
+  APP_PORT=3001
+  POSTGRES_PORT=5433
+  ```
+  Then restart: `docker compose up`.
+
+### Docker: want to reset to a clean state
+
+```bash
+# Stop containers and remove the database volume:
+docker compose down -v
+
+# Rebuild and start fresh:
+docker compose up --build
+```
+
 ### `Error: Can't reach database server`
 
 - Confirm PostgreSQL is running: `pg_isready` (or `brew services list` on macOS).
@@ -366,7 +463,7 @@ Key conventions:
   ```
 - Check the browser console and server terminal for any Prisma errors.
 
-### Port 3000 is already in use
+### Port 3000 is already in use (local dev)
 
 - Start the dev server on a different port:
   ```bash

@@ -26,9 +26,6 @@
 #   # Tear down and wipe the database volume:
 #   docker compose down -v
 #
-#   # Seed the database (after containers are running):
-#   docker compose exec app npm run db:seed
-#
 # Environment variables
 # ─────────────────────
 #   Copy .env.example to .env and adjust values as needed.  The compose file
@@ -42,6 +39,11 @@
 #   DATABASE_URL is assembled from the three variables above and injected into
 #   the app container so Prisma can connect.  You do not need to set it
 #   manually unless you are using an external database.
+#
+#   SEED_DATABASE – When 'true' (default), the app container seeds the database
+#                   with sample data on every startup.  The seed is idempotent
+#                   so this is safe on already-populated databases.  Set to
+#                   'false' in production to skip seeding.
 # =============================================================================
 
 services:
@@ -106,14 +108,31 @@ services:
       # the app and db service always use the same credentials without
       # requiring the caller to duplicate them.
       DATABASE_URL: "postgresql://${POSTGRES_USER:-ats_user}:${POSTGRES_PASSWORD:-ats_password}@db:5432/${POSTGRES_DB:-ats_sia_db}"
+      # Set to 'true' to automatically seed the database with sample data on
+      # every container start (safe — seed script is fully idempotent).
+      # Set to 'false' in production environments where real data already exists.
+      SEED_DATABASE: ${SEED_DATABASE:-true}
 
     ports:
       - "${APP_PORT:-3000}:3000"
 
-    # Run migrations then start the server.  Using `sh -c` keeps the
-    # entrypoint consistent with the base alpine image used in the Dockerfile.
+    # Startup sequence (fully automated — no manual steps required):
+    #   1. Apply pending migrations so the schema is always current.
+    #   2. Seed sample data when SEED_DATABASE=true (default).
+    #      The seed script is fully idempotent (upserts), so re-running on an
+    #      already-seeded database is safe and produces no duplicate rows.
+    #      Set SEED_DATABASE=false in .env to skip seeding (e.g. production).
+    #   3. Start the Next.js standalone server.
     command: >
-      sh -c "npx prisma migrate deploy && node server.js"
+      sh -c "
+        npx prisma migrate deploy &&
+        if [ \"$SEED_DATABASE\" = 'true' ]; then
+          echo 'Seeding database...' && node prisma/seed.js;
+        else
+          echo 'Skipping seed (SEED_DATABASE != true)';
+        fi &&
+        node server.js
+      "
 
 # =============================================================================
 # Named volumes

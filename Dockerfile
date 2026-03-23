@@ -71,6 +71,10 @@ COPY . .
 # at build time (required by Next.js server components that import prisma.ts).
 RUN npx prisma generate
 
+# Compile the seed script to CommonJS so it can be executed with plain `node`
+# in the runner stage (which has no TypeScript toolchain or tsx).
+RUN npm run db:seed:compile
+
 # Build the Next.js application.
 # output: 'standalone' in next.config.js produces .next/standalone – a
 # self-contained server that doesn't need the full node_modules at runtime.
@@ -108,10 +112,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy the public directory (favicon, SVGs, etc.).
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy the Prisma schema and migrations so `prisma migrate deploy` can apply
-# them at container startup before the Next.js server is launched.
-# The Prisma CLI itself is already present inside node_modules (copied as part
-# of the standalone trace by Next.js); we only need the project files.
+# Copy the Prisma schema, migrations, and compiled seed script so that:
+#   • `prisma migrate deploy` can apply migrations at container startup.
+#   • `node prisma/seed.js` can seed the database without needing tsx or tsc.
+# The Prisma CLI itself is present inside node_modules (traced by Next.js
+# standalone output); we only need the project-level files here.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Switch to the non-root user before starting the process.
@@ -125,10 +130,11 @@ EXPOSE 3000
 # Example (standalone):
 #   docker run -e DATABASE_URL="postgresql://user:pass@db:5432/ats_sia_db" ...
 #
-# When using docker-compose.yml the command is overridden to run migrations
-# first and then start the server:
-#   sh -c "npx prisma migrate deploy && node server.js"
+# When using docker-compose.yml the command is overridden to:
+#   1. Apply any pending migrations   (prisma migrate deploy)
+#   2. Seed the database with sample data (node prisma/seed.js — idempotent)
+#   3. Start the Next.js server       (node server.js)
 #
 # Default: start the standalone Next.js server directly (assumes the database
-# schema is already up to date).
+# schema is already up to date and seeded).
 CMD ["node", "server.js"]
