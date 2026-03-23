@@ -30,6 +30,12 @@ export interface RoleWithApplicationCount extends Role {
   }
 }
 
+export interface CandidateWithApplicationCount extends Candidate {
+  _count: {
+    applications: number
+  }
+}
+
 export interface RoleWithApplications extends Role {
   applications: ApplicationWithCandidate[]
   _count?: {
