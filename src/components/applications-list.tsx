@@ -124,6 +124,42 @@ function StatusCell({ applicationId, currentStatus }: StatusCellProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Delete button for individual application rows
+// ---------------------------------------------------------------------------
+
+function DeleteApplicationButton({ applicationId }: { applicationId: string }) {
+  const router = useRouter()
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm('Delete this application? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/applications/${applicationId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        alert('Failed to delete application')
+        setDeleting(false)
+        return
+      }
+      router.refresh()
+    } catch {
+      alert('Network error')
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={deleting}
+      className="font-medium text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+    >
+      {deleting ? '...' : 'Delete'}
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -184,12 +220,6 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Company
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Stage
               </th>
               <th
                 scope="col"
@@ -274,14 +304,6 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
                   </div>
                 </td>
 
-                {/* Stage — static badge */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
-                    {APP_STAGE_LABEL[application.stage] ??
-                      application.stage.replace(/_/g, ' ')}
-                  </span>
-                </td>
-
                 {/* Status — interactive dropdown */}
                 <StatusCell
                   applicationId={application.id}
@@ -312,7 +334,7 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
                   )}
                 </td>
 
-                {/* Actions — View candidate / View role */}
+                {/* Actions — View candidate / View role / Delete */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-3 text-sm">
                     <Link
@@ -330,6 +352,10 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
                     >
                       Role
                     </Link>
+                    <span className="text-gray-300" aria-hidden="true">
+                      |
+                    </span>
+                    <DeleteApplicationButton applicationId={application.id} />
                   </div>
                 </td>
               </tr>

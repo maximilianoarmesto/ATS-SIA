@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Navbar } from '@/components/navbar'
 import { RoleDetail } from '@/components/role-detail'
+import { DeleteButton } from '@/components/delete-button'
 import { prisma } from '@/lib/prisma'
 
 // ---------------------------------------------------------------------------
@@ -113,7 +114,7 @@ export default async function RoleDetailPage({ params }: PageProps) {
               href="/roles"
               className="btn btn-secondary btn-md"
             >
-              ← Back
+              &larr; Back
             </Link>
             <Link
               href={`/roles/${role.id}/edit`}
@@ -121,6 +122,12 @@ export default async function RoleDetailPage({ params }: PageProps) {
             >
               Edit Role
             </Link>
+            <DeleteButton
+              apiPath={`/api/roles/${role.id}`}
+              redirectPath="/roles"
+              label="Delete Role"
+              confirmMessage={`Delete "${role.title}"? This will also delete all associated applications.`}
+            />
           </div>
         </div>
 

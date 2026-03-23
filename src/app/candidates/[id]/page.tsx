@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Navbar } from '@/components/navbar'
 import { CandidateDetail } from '@/components/candidate-detail'
+import { DeleteButton } from '@/components/delete-button'
 import { prisma } from '@/lib/prisma'
 
 // ---------------------------------------------------------------------------
@@ -115,7 +116,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
               href="/candidates"
               className="btn btn-secondary btn-md"
             >
-              ← Back
+              &larr; Back
             </Link>
             <Link
               href={`/candidates/${candidate.id}/edit`}
@@ -123,6 +124,12 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             >
               Edit Candidate
             </Link>
+            <DeleteButton
+              apiPath={`/api/candidates/${candidate.id}`}
+              redirectPath="/candidates"
+              label="Delete Candidate"
+              confirmMessage={`Delete "${candidate.firstName} ${candidate.lastName}"? This will also delete all their applications.`}
+            />
           </div>
         </div>
 

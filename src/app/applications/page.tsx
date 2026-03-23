@@ -1,4 +1,7 @@
+export const dynamic = 'force-dynamic'
+
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { ApplicationsList } from '@/components/applications-list'
 import { prisma } from '@/lib/prisma'
@@ -70,6 +73,12 @@ export default async function ApplicationsPage() {
               Manage and review all job applications in the recruitment pipeline
             </p>
           </div>
+          <Link
+            href="/applications/new"
+            className="btn btn-primary btn-md self-start sm:self-auto"
+          >
+            + Add Application
+          </Link>
         </div>
 
         {/* ── Summary bar ─────────────────────────────────────────────── */}

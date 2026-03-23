@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Navbar } from '@/components/navbar'
 import { JobsList } from '@/components/jobs-list'
 import { prisma } from '@/lib/prisma'

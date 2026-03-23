@@ -34,6 +34,11 @@
 ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-alpine AS base
 
+# libc6-compat is required by native binaries on Alpine (Next.js, Prisma).
+# openssl is required so Prisma can detect the correct OpenSSL version and
+# download the matching engine binaries (Alpine ships OpenSSL 3.x).
+RUN apk add --no-cache libc6-compat openssl
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 – deps
 # Install ALL dependencies (including devDependencies needed for the build).
@@ -41,9 +46,6 @@ FROM node:${NODE_VERSION}-alpine AS base
 # doesn't change.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM base AS deps
-
-# libc6-compat is required by some native Node modules on Alpine.
-RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
@@ -115,9 +117,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copy the Prisma schema, migrations, and compiled seed script so that:
 #   • `prisma migrate deploy` can apply migrations at container startup.
 #   • `node prisma/seed.js` can seed the database without needing tsx or tsc.
-# The Prisma CLI itself is present inside node_modules (traced by Next.js
-# standalone output); we only need the project-level files here.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Copy Prisma CLI + engine binaries required for `prisma migrate deploy`.
+# The standalone output only traces runtime imports (@prisma/client), not CLI
+# tools, so these must be copied explicitly from the builder stage.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Switch to the non-root user before starting the process.
 USER nextjs

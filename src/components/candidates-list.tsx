@@ -77,12 +77,6 @@ export function CandidatesList({ candidates }: CandidatesListProps) {
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Contact
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
                 Location
               </th>
               <th
@@ -137,14 +131,6 @@ export function CandidatesList({ candidates }: CandidatesListProps) {
                       )}
                     </div>
                   </div>
-                </td>
-
-                {/* Contact — email + optional phone */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{candidate.email}</div>
-                  {candidate.phone && (
-                    <div className="text-xs text-gray-500 mt-0.5">{candidate.phone}</div>
-                  )}
                 </td>
 
                 {/* Location */}

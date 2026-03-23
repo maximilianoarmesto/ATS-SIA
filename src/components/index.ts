@@ -1,5 +1,4 @@
 export { Navbar } from './navbar'
-export { Hero } from './hero'
 export { JobsList } from './jobs-list'
 export { RolesList } from './roles-list'
 export { RoleDetail } from './role-detail'

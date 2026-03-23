@@ -117,10 +117,6 @@ services:
       # Set to 'false' in production environments where real data already exists.
       SEED_DATABASE: ${SEED_DATABASE:-true}
 
-      # Set SEED_DATABASE=false to skip seeding on subsequent restarts once
-      # the database is already populated.
-      SEED_DATABASE: ${SEED_DATABASE:-true}
-
     ports:
       - "${APP_PORT:-3000}:3000"
 
@@ -133,8 +129,8 @@ services:
     #   3. Start the Next.js standalone server.
     command: >
       sh -c "
-        npx prisma migrate deploy &&
-        if [ \"$SEED_DATABASE\" = 'true' ]; then
+        node node_modules/prisma/build/index.js migrate deploy &&
+        if [ \"$$SEED_DATABASE\" = 'true' ]; then
           echo 'Seeding database...' && node prisma/seed.js;
         else
           echo 'Skipping seed (SEED_DATABASE != true)';

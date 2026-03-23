@@ -112,6 +112,34 @@ export async function PUT(
 }
 
 // ---------------------------------------------------------------------------
+// DELETE /api/roles/[id]
+// ---------------------------------------------------------------------------
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+
+    const existing = await prisma.role.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Role not found' }, { status: 404 })
+    }
+
+    await prisma.role.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE /api/roles/[id] error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete role' },
+      { status: 500 }
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 

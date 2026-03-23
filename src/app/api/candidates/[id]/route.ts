@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
 import { prisma } from '@/lib/prisma'
 import {
   validateUpdateCandidate,
@@ -103,6 +105,7 @@ export async function PUT(
     }
 
     // Validate and upload new resume if provided
+    let resolvedResumeUrl: string | undefined
     if (resumeFile) {
       const fileResult = validateResumeFile(resumeFile)
       if (!fileResult.success) {
@@ -112,7 +115,7 @@ export async function PUT(
         )
       }
 
-      fields.resumeUrl = await uploadResume(resumeFile)
+      resolvedResumeUrl = await uploadResume(resumeFile)
     }
 
     // Validate update fields
@@ -124,9 +127,14 @@ export async function PUT(
       )
     }
 
+    const updateData = { ...validation.data }
+    if (resolvedResumeUrl) {
+      updateData.resumeUrl = resolvedResumeUrl
+    }
+
     const updated = await prisma.candidate.update({
       where: { id },
-      data: validation.data,
+      data: updateData,
       include: {
         _count: {
           select: { applications: true },
@@ -164,13 +172,53 @@ export async function PUT(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Persist a resume PDF and return its accessible URL.
- * Swap this implementation for your real storage adapter (S3, GCS, R2 …).
- */
+// ---------------------------------------------------------------------------
+// DELETE /api/candidates/[id]
+// ---------------------------------------------------------------------------
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+
+    const existing = await prisma.candidate.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Candidate not found' },
+        { status: 404 }
+      )
+    }
+
+    await prisma.candidate.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE /api/candidates/[id] error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete candidate' },
+      { status: 500 }
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
 async function uploadResume(file: File): Promise<string> {
+  const uploadsDir = join(process.cwd(), 'public', 'uploads', 'resumes')
+  await mkdir(uploadsDir, { recursive: true })
+
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  return `/uploads/resumes/${Date.now()}-${safeName}`
+  const fileName = `${Date.now()}-${safeName}`
+  const filePath = join(uploadsDir, fileName)
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await writeFile(filePath, buffer)
+
+  return `/api/uploads/resumes/${fileName}`
 }
 
 function isPrismaUniqueConstraintError(error: unknown): boolean {

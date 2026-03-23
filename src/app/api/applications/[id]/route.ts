@@ -105,6 +105,37 @@ export async function PUT(
 }
 
 // ---------------------------------------------------------------------------
+// DELETE /api/applications/[id]
+// ---------------------------------------------------------------------------
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+
+    const existing = await prisma.application.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Application not found' },
+        { status: 404 }
+      )
+    }
+
+    await prisma.application.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE /api/applications/[id] error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete application' },
+      { status: 500 }
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
 import { prisma } from '@/lib/prisma'
 import {
   validateCreateCandidate,
@@ -146,10 +148,9 @@ export async function POST(request: NextRequest) {
 
       // Persist the file and obtain its public/storage URL.
       resolvedResumeUrl = await uploadResume(resumeFile)
-      fields.resumeUrl = resolvedResumeUrl
     }
 
-    // Validate candidate fields
+    // Validate candidate fields (without resumeUrl — that's set by the server)
     const validation = validateCreateCandidate(fields)
     if (!validation.success) {
       return NextResponse.json(
@@ -158,8 +159,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const createData = { ...validation.data }
+    if (resolvedResumeUrl) {
+      createData.resumeUrl = resolvedResumeUrl
+    }
+
     const candidate = await prisma.candidate.create({
-      data: validation.data,
+      data: createData,
       include: {
         _count: {
           select: { applications: true },
@@ -190,25 +196,20 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 
 /**
- * Persist a resume PDF and return its accessible URL.
- *
- * This is a thin adapter layer — swap the implementation for your storage
- * provider (AWS S3, GCS, Cloudflare R2, local filesystem …) without touching
- * the route handler.
- *
- * The current implementation stores the file name and size as a placeholder
- * URL so the system works end-to-end without requiring external storage in
- * development/test environments.
+ * Persist a resume PDF to the local filesystem and return its public URL path.
  */
 async function uploadResume(file: File): Promise<string> {
-  // Replace this body with your real storage upload logic, e.g.:
-  //   const buffer = Buffer.from(await file.arrayBuffer())
-  //   const key = `resumes/${Date.now()}-${file.name}`
-  //   await s3Client.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: file.type }))
-  //   return `https://${BUCKET}.s3.amazonaws.com/${key}`
+  const uploadsDir = join(process.cwd(), 'public', 'uploads', 'resumes')
+  await mkdir(uploadsDir, { recursive: true })
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  return `/uploads/resumes/${Date.now()}-${safeName}`
+  const fileName = `${Date.now()}-${safeName}`
+  const filePath = join(uploadsDir, fileName)
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await writeFile(filePath, buffer)
+
+  return `/api/uploads/resumes/${fileName}`
 }
 
 function isPrismaUniqueConstraintError(error: unknown): boolean {

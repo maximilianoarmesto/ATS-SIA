@@ -193,7 +193,7 @@ export function CandidateDetail({ candidate }: CandidateDetailProps) {
         {/* Resume card */}
         <div className="card flex flex-col">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Résumé / CV
+            Resume / CV
           </h3>
 
           {candidate.resumeUrl ? (
@@ -245,7 +245,7 @@ export function CandidateDetail({ candidate }: CandidateDetailProps) {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                View Résumé
+                View Resume
               </a>
             </div>
           ) : (
@@ -268,7 +268,7 @@ export function CandidateDetail({ candidate }: CandidateDetailProps) {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  No résumé uploaded
+                  No resume uploaded
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Upload a CV when editing this candidate.
@@ -278,7 +278,7 @@ export function CandidateDetail({ candidate }: CandidateDetailProps) {
                 href={`/candidates/${candidate.id}/edit`}
                 className="btn btn-secondary btn-md w-full mt-1"
               >
-                Upload Résumé
+                Upload Resume
               </Link>
             </div>
           )}
