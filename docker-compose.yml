@@ -5,9 +5,10 @@
 # ────────
 #   db    – PostgreSQL 16 with a named volume for persistent data storage.
 #   app   – Next.js application container built from the local Dockerfile.
-#           Waits for db to pass its healthcheck before starting, then runs
-#           `prisma migrate deploy` to apply any pending migrations before
-#           launching the Next.js server.
+#           Waits for db to pass its healthcheck before starting, then runs:
+#             1. prisma migrate deploy  – applies any pending migrations
+#             2. node prisma/seed.js    – seeds initial data (SEED_DATABASE=true)
+#             3. node server.js         – starts the Next.js server
 #
 # Usage
 # ─────
@@ -26,22 +27,21 @@
 #   # Tear down and wipe the database volume:
 #   docker compose down -v
 #
-#   # Seed the database (after containers are running):
-#   docker compose exec app npm run db:seed
-#
 # Environment variables
 # ─────────────────────
-#   Copy .env.example to .env and adjust values as needed.  The compose file
-#   reads variables from .env automatically (Docker Compose default behaviour).
+#   Copy .env.example to .env and adjust values as needed.  Docker Compose
+#   loads .env automatically from the project root.
 #
-#   Required overrides in .env:
-#     POSTGRES_USER     – PostgreSQL superuser name          (default: ats_user)
-#     POSTGRES_PASSWORD – PostgreSQL superuser password      (default: ats_password)
-#     POSTGRES_DB       – Database name                      (default: ats_sia_db)
+#   POSTGRES_USER     – PostgreSQL superuser name          (default: ats_user)
+#   POSTGRES_PASSWORD – PostgreSQL superuser password      (default: ats_password)
+#   POSTGRES_DB       – Database name                      (default: ats_sia_db)
+#   POSTGRES_PORT     – Host port for the db service       (default: 5432)
+#   APP_PORT          – Host port for the app service      (default: 3000)
+#   SEED_DATABASE     – Seed initial data on startup       (default: true)
 #
-#   DATABASE_URL is assembled from the three variables above and injected into
-#   the app container so Prisma can connect.  You do not need to set it
-#   manually unless you are using an external database.
+#   DATABASE_URL is assembled from the POSTGRES_* variables above and injected
+#   into the app container automatically — you do not need to set it manually
+#   unless you are pointing at an external database.
 # =============================================================================
 
 services:
@@ -62,7 +62,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Mount the init-scripts directory so the database is initialised with
-      # the correct extensions on first startup.
+      # the correct extensions on first startup (e.g. pg_trgm).
       - ./docker/init-db:/docker-entrypoint-initdb.d:ro
 
     # Expose port 5432 to the host for direct access via psql or a GUI client.
@@ -70,8 +70,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
 
-    # Healthcheck ensures the app container only starts once PostgreSQL is
-    # genuinely ready to accept connections (not just the process started).
+    # Healthcheck: the app container only starts once PostgreSQL is genuinely
+    # ready to accept connections — not just when the process has launched.
     healthcheck:
       test:
         [
@@ -93,7 +93,7 @@ services:
 
     restart: unless-stopped
 
-    # Wait until PostgreSQL is healthy before starting the application.
+    # Do not start the application until PostgreSQL is healthy.
     depends_on:
       db:
         condition: service_healthy
@@ -102,18 +102,37 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       HOSTNAME: "0.0.0.0"
+
       # Assemble DATABASE_URL from the individual Postgres variables so that
       # the app and db service always use the same credentials without
-      # requiring the caller to duplicate them.
+      # requiring the operator to duplicate them.
       DATABASE_URL: "postgresql://${POSTGRES_USER:-ats_user}:${POSTGRES_PASSWORD:-ats_password}@db:5432/${POSTGRES_DB:-ats_sia_db}"
+
+      # Set SEED_DATABASE=false to skip seeding on subsequent restarts once
+      # the database is already populated.
+      SEED_DATABASE: ${SEED_DATABASE:-true}
 
     ports:
       - "${APP_PORT:-3000}:3000"
 
-    # Run migrations then start the server.  Using `sh -c` keeps the
-    # entrypoint consistent with the base alpine image used in the Dockerfile.
+    # Startup sequence:
+    #   1. Apply any pending Prisma migrations.
+    #   2. Conditionally seed the database with initial data (idempotent upserts).
+    #   3. Start the Next.js standalone server.
+    #
+    # Notes:
+    #   - $$ escapes the shell variable so Docker Compose does not try to
+    #     interpolate $SEED_DATABASE as a Compose variable.
+    #   - `node prisma/seed.js` is the pre-compiled seed script produced by
+    #     `npm run db:seed:compile` during the Docker build.
     command: >
-      sh -c "npx prisma migrate deploy && node server.js"
+      sh -c "
+        npx prisma migrate deploy &&
+        if [ \"$$SEED_DATABASE\" = \"true\" ]; then
+          echo 'Seeding database...' && node prisma/seed.js;
+        fi &&
+        node server.js
+      "
 
 # =============================================================================
 # Named volumes

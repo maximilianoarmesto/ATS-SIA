@@ -1,0 +1,28 @@
+{
+  // Separate TypeScript config for compiling prisma/seed.ts into a plain
+  // CommonJS module (prisma/seed.js) that can be executed with `node` inside
+  // the Docker runner stage, where tsx / ts-node are not available.
+  //
+  // Usage:
+  //   npx tsc --project tsconfig.seed.json
+  //   node prisma/seed.js
+  //
+  // The Dockerfile builder stage runs `npm run db:seed:compile` so the
+  // compiled output is present before it is copied into the runner stage.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // CommonJS is required for `node prisma/seed.js` to work without an
+    // ESM loader.
+    "module": "commonjs",
+    // node moduleResolution is compatible with CommonJS output.
+    "moduleResolution": "node",
+    // We want actual JS output, not just a type-check.
+    "noEmit": false,
+    // Disable incremental compilation so the output is always fresh.
+    "incremental": false,
+    // Emit compiled JS alongside the source in the prisma/ directory.
+    "outDir": "./prisma"
+  },
+  // Compile only the seed script — do not pull in the entire Next.js app.
+  "include": ["prisma/seed.ts"]
+}
