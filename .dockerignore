@@ -29,3 +29,6 @@ npm-debug.log*
 
 # ─── Test / coverage ─────────────────────────────────────────────────────────
 coverage
+
+# ─── Docker Compose init scripts (mounted as a volume, not baked into image) ─
+docker

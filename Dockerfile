@@ -4,7 +4,8 @@
 # Multi-stage build:
 #   1. deps    – install production + dev dependencies
 #   2. builder – generate Prisma client and produce a Next.js standalone build
-#   3. runner  – minimal production image (only the standalone artefact)
+#   3. runner  – minimal production image (standalone artefact + Prisma CLI
+#                for running migrations at container startup)
 #
 # Environment variables
 # ─────────────────────
@@ -12,6 +13,9 @@
 #   PostgreSQL connection string consumed by Prisma.
 #   Supply it via `docker run -e DATABASE_URL=...` or an orchestrator secret.
 #   Example: postgresql://user:password@db:5432/ats_sia_db
+#
+#   When using docker-compose.yml the value is assembled automatically from
+#   the POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB variables.
 #
 # NODE_ENV       (default: production)
 #   Controls Next.js behaviour (minification, error overlays, etc.).
@@ -104,6 +108,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy the public directory (favicon, SVGs, etc.).
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Copy the Prisma schema and migrations so `prisma migrate deploy` can apply
+# them at container startup before the Next.js server is launched.
+# The Prisma CLI itself is already present inside node_modules (copied as part
+# of the standalone trace by Next.js); we only need the project files.
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
 # Switch to the non-root user before starting the process.
 USER nextjs
 
@@ -112,8 +122,13 @@ EXPOSE 3000
 
 # DATABASE_URL must be provided at runtime; the build intentionally leaves it
 # unset so secrets are never baked into the image layer.
-# Example:
+# Example (standalone):
 #   docker run -e DATABASE_URL="postgresql://user:pass@db:5432/ats_sia_db" ...
 #
-# Start the standalone Next.js server.
+# When using docker-compose.yml the command is overridden to run migrations
+# first and then start the server:
+#   sh -c "npx prisma migrate deploy && node server.js"
+#
+# Default: start the standalone Next.js server directly (assumes the database
+# schema is already up to date).
 CMD ["node", "server.js"]
