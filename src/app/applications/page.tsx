@@ -6,12 +6,12 @@ async function getApplications() {
   try {
     const applications = await prisma.application.findMany({
       include: {
-        job: true,
-        user: true
+        candidate: true,
+        role: true,
       },
       orderBy: {
-        appliedAt: 'desc'
-      }
+        appliedAt: 'desc',
+      },
     })
     return applications
   } catch (error) {
@@ -62,6 +62,9 @@ export default async function ApplicationsPage() {
                       Company
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stage
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -79,44 +82,59 @@ export default async function ApplicationsPage() {
                         <div className="flex items-center">
                           <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
                             <span className="text-primary-600 font-medium text-sm">
-                              {application.user.name?.charAt(0) || 'U'}
+                              {application.candidate.firstName.charAt(0)}
+                              {application.candidate.lastName.charAt(0)}
                             </span>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {application.user.name || 'Unknown User'}
+                              {application.candidate.firstName} {application.candidate.lastName}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {application.user.email}
+                              {application.candidate.email}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {application.job.title}
+                          {application.role.title}
                         </div>
+                        {application.role.department && (
+                          <div className="text-xs text-gray-500">
+                            {application.role.department}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {application.job.company}
+                          {application.role.company}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                          {application.stage.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          application.status === 'PENDING'
+                          application.status === 'APPLIED'
                             ? 'bg-yellow-100 text-yellow-800'
-                            : application.status === 'REVIEWED'
+                            : application.status === 'UNDER_REVIEW'
                             ? 'bg-blue-100 text-blue-800'
+                            : application.status === 'SHORTLISTED'
+                            ? 'bg-cyan-100 text-cyan-800'
                             : application.status === 'INTERVIEWING'
                             ? 'bg-purple-100 text-purple-800'
-                            : application.status === 'ACCEPTED'
+                            : application.status === 'OFFER_SENT'
+                            ? 'bg-orange-100 text-orange-800'
+                            : application.status === 'HIRED'
                             ? 'bg-green-100 text-green-800'
                             : application.status === 'REJECTED'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {application.status}
+                          {application.status.replace(/_/g, ' ')}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

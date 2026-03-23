@@ -3,33 +3,33 @@ import { Hero } from '@/components/hero'
 import { JobsList } from '@/components/jobs-list'
 import { prisma } from '@/lib/prisma'
 
-async function getJobs() {
+async function getPublishedRoles() {
   try {
-    const jobs = await prisma.job.findMany({
+    const roles = await prisma.role.findMany({
       where: {
-        status: 'ACTIVE'
+        status: 'PUBLISHED',
       },
       include: {
         _count: {
           select: {
-            applications: true
-          }
-        }
+            applications: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
+        publishedAt: 'desc',
       },
-      take: 6
+      take: 6,
     })
-    return jobs
+    return roles
   } catch (error) {
-    console.error('Failed to fetch jobs:', error)
+    console.error('Failed to fetch roles:', error)
     return []
   }
 }
 
 export default async function Home() {
-  const jobs = await getJobs()
+  const roles = await getPublishedRoles()
 
   return (
     <main>
@@ -39,13 +39,13 @@ export default async function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Featured Job Opportunities
+              Featured Role Opportunities
             </h2>
             <p className="text-lg text-gray-600">
               Discover your next career opportunity
             </p>
           </div>
-          <JobsList jobs={jobs} />
+          <JobsList roles={roles} />
         </div>
       </section>
     </main>

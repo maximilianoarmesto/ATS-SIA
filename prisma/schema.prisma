@@ -10,6 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Users — platform accounts (admins, recruiters, hiring managers)
+// ---------------------------------------------------------------------------
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -19,64 +22,166 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  applications Application[]
+  postedRoles Role[]
 
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
-model Job {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  company     String
+// ---------------------------------------------------------------------------
+// Candidates — people who apply for roles
+// ---------------------------------------------------------------------------
+model Candidate {
+  id          String          @id @default(cuid())
+  email       String          @unique
+  firstName   String
+  lastName    String
+  phone       String?
+  linkedinUrl String?
+  portfolioUrl String?
+  resumeUrl   String?         // URL to latest uploaded CV/résumé
   location    String?
-  salary      String?
-  status      JobStatus @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  summary     String?         // Short professional summary / bio
+  status      CandidateStatus @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Relations
   applications Application[]
 
-  @@map("jobs")
+  @@index([email])
+  @@index([status])
+  @@index([lastName, firstName])
+  @@map("candidates")
 }
 
-model Application {
-  id       String            @id @default(cuid())
-  userId   String
-  jobId    String
-  status   ApplicationStatus @default(PENDING)
-  resume   String? // URL to resume file
-  coverLetter String?
-  notes    String?
-  appliedAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+// ---------------------------------------------------------------------------
+// Roles — open positions / job postings
+// ---------------------------------------------------------------------------
+model Role {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  department    String?
+  company       String
+  location      String?
+  locationType  LocationType @default(ON_SITE)
+  employmentType EmploymentType @default(FULL_TIME)
+  salaryMin     Int?         // in minor currency units (e.g. cents)
+  salaryMax     Int?
+  salaryCurrency String?     @default("USD")
+  requirements  String?      // free-text or markdown list of requirements
+  benefits      String?      // free-text or markdown list of benefits
+  status        RoleStatus   @default(DRAFT)
+  postedById    String?      // nullable — role can exist before a recruiter is assigned
+  publishedAt   DateTime?
+  closesAt      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  postedBy     User?         @relation(fields: [postedById], references: [id], onDelete: SetNull)
+  applications Application[]
 
-  @@unique([userId, jobId])
+  @@index([status])
+  @@index([department])
+  @@index([company])
+  @@index([locationType])
+  @@index([employmentType])
+  @@index([postedById])
+  @@index([publishedAt])
+  @@map("roles")
+}
+
+// ---------------------------------------------------------------------------
+// Applications — join table between Candidate and Role, tracks pipeline stage
+// ---------------------------------------------------------------------------
+model Application {
+  id          String            @id @default(cuid())
+  candidateId String
+  roleId      String
+  status      ApplicationStatus @default(APPLIED)
+  stage       ApplicationStage  @default(APPLICATION)
+  resumeUrl   String?           // snapshot of the CV used for this application
+  coverLetter String?
+  notes       String?           // internal recruiter notes
+  rating      Int?              // 1-5 star rating assigned by reviewer
+  source      String?           // e.g. "LinkedIn", "Referral", "Company website"
+  appliedAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, roleId])
+  @@index([candidateId])
+  @@index([roleId])
+  @@index([status])
+  @@index([stage])
+  @@index([appliedAt])
   @@map("applications")
 }
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
 
 enum UserRole {
   USER
   ADMIN
   RECRUITER
+  HIRING_MANAGER
 }
 
-enum JobStatus {
-  ACTIVE
-  CLOSED
-  DRAFT
+enum CandidateStatus {
+  ACTIVE      // actively looking / open to opportunities
+  HIRED       // successfully placed
+  INACTIVE    // no longer in the pipeline
+  BLACKLISTED // do-not-contact
+}
+
+enum RoleStatus {
+  DRAFT       // not yet published; only visible to internal team
+  PUBLISHED   // live and accepting applications
+  PAUSED      // temporarily not accepting new applications
+  CLOSED      // no longer accepting applications
+  ARCHIVED    // historical record; hidden from default views
+}
+
+enum LocationType {
+  ON_SITE
+  REMOTE
+  HYBRID
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  TEMPORARY
 }
 
 enum ApplicationStatus {
-  PENDING
-  REVIEWED
-  INTERVIEWING
-  ACCEPTED
-  REJECTED
-  WITHDRAWN
+  APPLIED       // submitted, not yet reviewed
+  UNDER_REVIEW  // recruiter is actively reviewing
+  SHORTLISTED   // moved forward for further evaluation
+  INTERVIEWING  // interview process ongoing
+  OFFER_SENT    // offer extended to candidate
+  HIRED         // offer accepted and candidate hired
+  REJECTED      // not selected
+  WITHDRAWN     // candidate withdrew their application
+}
+
+enum ApplicationStage {
+  APPLICATION   // initial submission
+  SCREENING     // phone / video screen
+  ASSESSMENT    // technical test / homework assignment
+  INTERVIEW_1   // first formal interview
+  INTERVIEW_2   // second / panel interview
+  FINAL_ROUND   // final interview round
+  OFFER         // offer stage
+  CLOSED        // terminal stage (hired / rejected / withdrawn)
 }
