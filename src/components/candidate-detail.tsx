@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { type CandidateWithApplications } from '@/types'
+import { type CandidateWithApplications, type CandidateNote } from '@/types'
 import { formatDate } from '@/lib/utils'
+import { CandidateNotes } from './candidate-notes'
 
 // ---------------------------------------------------------------------------
 // Status display helpers — candidate status
@@ -62,7 +63,10 @@ function InfoRow({
 // ---------------------------------------------------------------------------
 
 interface CandidateDetailProps {
-  candidate: CandidateWithApplications & { _count: { applications: number } }
+  candidate: CandidateWithApplications & {
+    _count: { applications: number }
+    notes: CandidateNote[]
+  }
 }
 
 export function CandidateDetail({ candidate }: CandidateDetailProps) {
@@ -284,6 +288,9 @@ export function CandidateDetail({ candidate }: CandidateDetailProps) {
           )}
         </div>
       </div>
+
+      {/* ── Notes ────────────────────────────────────────────────────── */}
+      <CandidateNotes candidateId={candidate.id} notes={candidate.notes} />
 
       {/* ── Applications ─────────────────────────────────────────────── */}
       <div className="card overflow-hidden p-0">

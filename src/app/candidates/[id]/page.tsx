@@ -53,6 +53,9 @@ async function getCandidate(id: string) {
           },
           orderBy: { appliedAt: 'desc' },
         },
+        notes: {
+          orderBy: { createdAt: 'desc' },
+        },
         _count: {
           select: { applications: true },
         },
