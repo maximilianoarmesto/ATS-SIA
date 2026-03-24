@@ -1,6 +1,7 @@
 export type {
   User,
   Candidate,
+  CandidateNote,
   Role,
   Application,
   // Enums
@@ -16,6 +17,7 @@ export type {
 import type {
   User,
   Candidate,
+  CandidateNote,
   Role,
   Application,
 } from '@prisma/client'
@@ -58,4 +60,8 @@ export interface ApplicationWithCandidate extends Application {
 export interface ApplicationWithDetails extends Application {
   candidate: Candidate
   role: Role
+}
+
+export interface CandidateWithNotes extends Candidate {
+  notes: CandidateNote[]
 }

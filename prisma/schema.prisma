@@ -49,6 +49,7 @@ model Candidate {
 
   // Relations
   applications Application[]
+  notes        CandidateNote[]
 
   @@index([email])
   @@index([status])
@@ -122,6 +123,23 @@ model Application {
   @@index([stage])
   @@index([appliedAt])
   @@map("applications")
+}
+
+// ---------------------------------------------------------------------------
+// CandidateNotes — recruiter/hiring-manager notes attached to a candidate
+// ---------------------------------------------------------------------------
+model CandidateNote {
+  id          String    @id @default(cuid())
+  candidateId String
+  content     String    // The note body (plain text or light markdown)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@map("candidate_notes")
 }
 
 // ---------------------------------------------------------------------------
