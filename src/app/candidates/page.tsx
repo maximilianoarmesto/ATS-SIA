@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { CandidatesList } from '@/components/candidates-list'
+import { CandidateSearch } from '@/components/candidate-search'
 import { prisma } from '@/lib/prisma'
 
 // ---------------------------------------------------------------------------
@@ -78,12 +79,15 @@ export default async function CandidatesPage() {
           </Link>
         </div>
 
+        {/* ── Search panel ────────────────────────────────────────────── */}
+        <CandidateSearch />
+
         {/* ── Summary bar ─────────────────────────────────────────────── */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
-            Showing{' '}
+            All candidates —{' '}
             <span className="font-semibold text-gray-900">{totalCount}</span>{' '}
-            candidate{totalCount !== 1 ? 's' : ''}
+            total
           </p>
 
           {totalCount > 0 && (
