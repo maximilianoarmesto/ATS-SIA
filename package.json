@@ -17,6 +17,8 @@
     "test:notes": "npm run test:notes:validation && npm run test:notes:collection-route && npm run test:notes:detail-route && npm run test:notes:component",
     "test:search": "npx tsx src/app/api/candidates/search/route.test.ts",
     "test:search:component": "npx tsx src/components/candidate-search.test.ts",
+    "test:search:integration": "npx tsx src/components/candidate-search-integration.test.ts",
+    "test:search:all": "npm run test:search && npm run test:search:component && npm run test:search:integration",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
