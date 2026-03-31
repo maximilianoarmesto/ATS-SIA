@@ -344,6 +344,86 @@ export function validateUpdateCandidate(
 }
 
 // ---------------------------------------------------------------------------
+// validateCandidateSearch
+//
+// Validates query-string parameters for GET /api/candidates/search.
+//
+// Params:
+//   name      — partial match against firstName + lastName (optional, max 200)
+//   linkedin  — partial match against linkedinUrl         (optional, max 500)
+//   page      — 1-based page number                       (optional, default 1)
+//   pageSize  — results per page, 1–100                   (optional, default 20)
+//
+// Rules:
+//   • At least one of `name` or `linkedin` must be provided and non-empty.
+//   • Both are trimmed before use.
+//   • page / pageSize are clamped to valid ranges rather than rejected so that
+//     callers with slightly out-of-range values still get a useful response.
+// ---------------------------------------------------------------------------
+
+export interface CandidateSearchInput {
+  name?: string
+  linkedin?: string
+  page: number
+  pageSize: number
+}
+
+export function validateCandidateSearch(
+  raw: Record<string, string | null | undefined>
+): ValidationResult<CandidateSearchInput> {
+  const errors: string[] = []
+
+  const name = raw.name?.trim() ?? ''
+  const linkedin = raw.linkedin?.trim() ?? ''
+
+  if (!name && !linkedin) {
+    errors.push(
+      'At least one search parameter is required: "name" or "linkedin"'
+    )
+  }
+
+  if (name.length > 200) {
+    errors.push('name must not exceed 200 characters')
+  }
+
+  if (linkedin.length > 500) {
+    errors.push('linkedin must not exceed 500 characters')
+  }
+
+  const rawPage = raw.page
+  const rawPageSize = raw.pageSize
+
+  let page = 1
+  let pageSize = 20
+
+  if (rawPage !== undefined && rawPage !== null && rawPage !== '') {
+    const parsed = parseInt(rawPage as string, 10)
+    if (isNaN(parsed) || !Number.isInteger(parsed)) {
+      errors.push('page must be a positive integer')
+    } else {
+      page = Math.max(1, parsed)
+    }
+  }
+
+  if (rawPageSize !== undefined && rawPageSize !== null && rawPageSize !== '') {
+    const parsed = parseInt(rawPageSize as string, 10)
+    if (isNaN(parsed) || !Number.isInteger(parsed)) {
+      errors.push('pageSize must be a positive integer')
+    } else {
+      pageSize = Math.min(100, Math.max(1, parsed))
+    }
+  }
+
+  if (errors.length > 0) return { success: false, errors }
+
+  const data: CandidateSearchInput = { page, pageSize }
+  if (name) data.name = name
+  if (linkedin) data.linkedin = linkedin
+
+  return { success: true, data }
+}
+
+// ---------------------------------------------------------------------------
 // validateResumeFile
 // ---------------------------------------------------------------------------
 
